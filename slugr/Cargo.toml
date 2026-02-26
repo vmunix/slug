@@ -1,0 +1,18 @@
+[package]
+name = "slugr"
+version = "0.1.1"
+edition = "2021"
+description = "Slugr — a filesystem-aware slug generator"
+license = "BSD-3-Clause"
+repository = "https://github.com/vmunix/slugr"
+
+[dependencies]
+fileslug = { path = "../crates/fileslug" }
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "fileslug"
+version = "0.1.0"
+edition = "2021"
+description = "Filename-aware slug generator — slugifies file and directory names while preserving extensions, dotfiles, and version numbers"
+license = "BSD-3-Clause"
+repository = "https://github.com/vmunix/slugr"
+readme = "README.md"
+keywords = ["slug", "filename", "rename", "slugify", "sanitize"]
+categories = ["text-processing", "filesystem"]
+
+[dependencies]
+any_ascii = "0.3"
+
+[lints]
+workspace = true
