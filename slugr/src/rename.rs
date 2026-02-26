@@ -34,9 +34,11 @@ pub enum RenameResult {
 /// Maximum number of collision suffixes to try before giving up.
 const MAX_COLLISION_SUFFIX: u32 = 1_000;
 
-/// Compute a safe target path, appending a numeric suffix if the target already exists.
-/// If `source` is provided, it is excluded from collision detection (handles case-insensitive FS).
-/// Returns the final target path, or an error if all suffixes up to the cap are exhausted.
+/// Find a non-colliding target path, appending `-2`, `-3`, etc. if needed.
+///
+/// `source` is excluded from collision checks so that case-only renames
+/// (e.g. `File.txt` → `file.txt`) don't falsely collide on case-insensitive
+/// filesystems. Returns an error after 1,000 suffixes are exhausted.
 pub fn safe_target(target: &Path, no_clobber: bool, source: Option<&Path>) -> io::Result<PathBuf> {
     let collides = |p: &Path| p.exists() && !source.is_some_and(|s| same_file(s, p));
 
@@ -74,7 +76,6 @@ pub fn safe_target(target: &Path, no_clobber: bool, source: Option<&Path>) -> io
 /// Handles case-only renames on case-insensitive filesystems (macOS).
 #[must_use]
 pub fn rename_file(source: &Path, target: &Path, no_clobber: bool, dry_run: bool) -> RenameResult {
-    // Same path bytes → no rename needed
     if source == target {
         return RenameResult::Skipped(source.to_path_buf());
     }

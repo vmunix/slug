@@ -29,7 +29,6 @@ fn main() -> ExitCode {
     let dry_run = !args.execute;
     let no_clobber = !args.clobber;
 
-    // Collect input paths: from args or stdin
     let input_paths: Vec<PathBuf> = if !args.files.is_empty() {
         args.files
     } else if !io::stdin().is_terminal() {
@@ -45,7 +44,6 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    // Expand paths (recursive or not)
     let paths = collect_paths(&input_paths, args.recursive);
 
     if dry_run {
@@ -62,18 +60,16 @@ fn main() -> ExitCode {
 
         let new_name = slugify(&filename, &options);
 
-        // Guard: empty or invalid slug would join to parent dir
+        // Empty/dot slugs would resolve to the parent directory
         if new_name.is_empty() || *new_name == *"." || *new_name == *".." {
             eprintln!("slugr: cannot rename '{}': slugified name is invalid", path.display());
             had_error = true;
             continue;
         }
 
-        // Build target path: same parent, new filename
         let parent = path.parent().unwrap_or(std::path::Path::new("."));
         let target = parent.join(&*new_name);
 
-        // Interactive mode: prompt before each rename
         if args.interactive && path != &target {
             eprint!("slugr: rename '{}' -> '{}'? [y/N] ", path.display(), target.display());
             let mut answer = String::new();

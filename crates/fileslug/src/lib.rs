@@ -16,11 +16,22 @@
 
 use std::borrow::Cow;
 
-/// Split a filename into (base, extension).
+/// Split a filename into `(base, extension)`.
 ///
-/// Handles compound extensions (.tar.gz, .tar.bz2, .tar.xz, .tar.zst).
-/// Dotfiles (.gitignore) return ("", ".gitignore") — treated as no-base.
-/// Files with no extension return (name, "").
+/// Handles compound extensions (`.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`),
+/// dotfiles, and files with no extension. Dotfiles like `.gitignore` are treated
+/// as having no base — the entire name is the "extension".
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::split_extension;
+///
+/// assert_eq!(split_extension("report.pdf"), ("report", ".pdf"));
+/// assert_eq!(split_extension("archive.tar.gz"), ("archive", ".tar.gz"));
+/// assert_eq!(split_extension(".gitignore"), ("", ".gitignore"));
+/// assert_eq!(split_extension("Makefile"), ("Makefile", ""));
+/// ```
 #[must_use]
 pub fn split_extension(filename: &str) -> (&str, &str) {
     const COMPOUND: &[&str] = &[".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
@@ -46,19 +57,38 @@ pub fn split_extension(filename: &str) -> (&str, &str) {
     }
 }
 
-/// The separator style for slugified filenames.
+/// Word separator style for slugified filenames.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Style {
+    /// `my-cool-file.txt` (default)
     #[default]
     Kebab,
+    /// `my_cool_file.txt`
     Snake,
+    /// `myCoolFile.txt`
     Camel,
 }
 
-/// Options controlling the slugification pipeline.
+/// Options controlling the [`slugify`] pipeline.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify, SlugifyOptions, Style};
+///
+/// // Snake case, with unicode transliteration (default)
+/// let opts = SlugifyOptions { style: Style::Snake, ..Default::default() };
+/// assert_eq!(slugify("My Résumé.pdf", &opts), "my_resume.pdf");
+///
+/// // Kebab case, keeping unicode intact
+/// let opts = SlugifyOptions { keep_unicode: true, ..Default::default() };
+/// assert_eq!(slugify("Café Menu.txt", &opts), "café-menu.txt");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SlugifyOptions {
+    /// Word separator style (kebab, snake, or camel).
     pub style: Style,
+    /// When `true`, skip ASCII transliteration and preserve unicode characters.
     pub keep_unicode: bool,
 }
 
@@ -171,17 +201,23 @@ fn truncate_base(base: &str, ext: &str, max_bytes: usize) -> String {
 
 /// Slugify a filename according to the given options.
 ///
-/// Pipeline:
-/// 1. Split extension (preserved as-is)
-/// 2. Transliterate unicode to ASCII (unless `keep_unicode`)
-/// 3. Strip bracket characters, keep contents
-///    3b. Preserve dots in version numbers
-/// 4. Normalize separators + lowercase
-/// 5. Collapse repeated separators, trim
-///    5b. Restore version dots
-/// 6. Restore leading dot for dotfiles
-/// 7. Truncate base if filename exceeds 255 bytes
-/// 8. Rejoin extension
+/// Converts a filename to a clean, shell-safe slug while preserving its
+/// extension, dotfile status, and any embedded version numbers. Returns
+/// [`Cow::Borrowed`] when the input is already clean (e.g. dotfiles).
+///
+/// Names exceeding 255 bytes are silently truncated at a word boundary.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify, SlugifyOptions};
+///
+/// let opts = SlugifyOptions::default();
+/// assert_eq!(slugify("My Résumé (Final).pdf", &opts), "my-resume-final.pdf");
+/// assert_eq!(slugify(".gitignore", &opts), ".gitignore");
+/// assert_eq!(slugify("app-1.2.3.dmg", &opts), "app-1.2.3.dmg");
+/// assert_eq!(slugify("Photo 2024_01.JPG", &opts), "photo-2024-01.JPG");
+/// ```
 #[must_use]
 pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
     if filename.is_empty() {
