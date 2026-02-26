@@ -1,13 +1,17 @@
 [package]
 name = "slugr"
-version = "0.1.1"
+version = "0.1.0"
 edition = "2021"
-description = "Slugr — a filesystem-aware slug generator"
+rust-version = "1.81"
+description = "Rename files and directories to clean, URL-safe slugs"
 license = "BSD-3-Clause"
 repository = "https://github.com/vmunix/slugr"
+readme = "../README.md"
+keywords = ["slug", "rename", "filename", "cli", "slugify"]
+categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
-fileslug = { path = "../crates/fileslug" }
+fileslug = { version = "0.1.0", path = "../crates/fileslug" }
 clap = { version = "4", features = ["derive"] }
 walkdir = "2"
 
