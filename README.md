@@ -11,26 +11,19 @@ Photo 2024_01.JPG -> photo-2024-01.JPG
 
 ## Install
 
-**Homebrew (macOS):**
+**Cargo** (requires [Rust](https://rustup.rs/)):
+
+```bash
+cargo install slugr
+```
+
+**Homebrew** (macOS):
 
 ```bash
 brew install vmunix/tap/slugr
 ```
 
-**Cargo:**
-
-```bash
-cargo install --path slugr
-```
-
 **Pre-built binaries** are available on the [releases page](https://github.com/vmunix/slugr/releases) for macOS (Intel & Apple Silicon) and Linux (x86_64 & ARM64).
-
-Or build from source:
-
-```bash
-cargo build --release
-# binary is at target/release/slugr
-```
 
 ## Usage
 
