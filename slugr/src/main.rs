@@ -13,7 +13,7 @@ use clap::Parser;
 
 use cli::Cli;
 use rename::{rename_file, RenameResult};
-use fileslug::{slugify, SlugifyOptions};
+use fileslug::{slugify, slugify_string, SlugifyOptions};
 use walk::collect_paths;
 
 fn main() -> ExitCode {
@@ -25,6 +25,37 @@ fn main() -> ExitCode {
         style,
         keep_unicode: args.keep_unicode,
     };
+
+    // Pipe mode: read stdin, slugify, write stdout
+    if args.pipe {
+        use std::io::Write;
+        let stdout = io::stdout();
+        let mut out = io::BufWriter::new(stdout.lock());
+        let stdin = io::stdin();
+        for line in stdin.lock().lines() {
+            let line = match line {
+                Ok(l) => l,
+                Err(e) => {
+                    eprintln!("slugr: read error: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            if line.is_empty() {
+                continue;
+            }
+            let slugified = if args.raw {
+                slugify_string(&line, &options)
+            } else {
+                slugify(&line, &options)
+            };
+            if slugified.is_empty() {
+                eprintln!("slugr: warning: '{line}' slugifies to empty");
+                continue;
+            }
+            let _ = writeln!(out, "{slugified}");
+        }
+        return ExitCode::SUCCESS;
+    }
 
     let dry_run = !args.execute;
     let no_clobber = !args.clobber;
