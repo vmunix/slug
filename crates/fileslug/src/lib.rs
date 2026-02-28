@@ -302,6 +302,87 @@ pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> 
     Cow::Owned(format!("{slugified}{ext}"))
 }
 
+/// Slugify an arbitrary string (not a filename).
+///
+/// Unlike [`slugify`], this treats the entire input as plain text — no
+/// extension splitting, no dotfile preservation. Use this for generating
+/// URL slugs, identifiers, or other non-filename use cases.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify_string, SlugifyOptions};
+///
+/// let opts = SlugifyOptions::default();
+/// assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+/// assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+/// ```
+#[must_use]
+pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
+    if input.is_empty() {
+        return Cow::Borrowed("");
+    }
+
+    // Step 1: Transliterate
+    let text = if options.keep_unicode {
+        input.to_string()
+    } else {
+        any_ascii::any_ascii(input)
+    };
+
+    // Step 2: Strip bracket characters, keep contents
+    let text = text.replace(['(', ')', '[', ']', '{', '}'], " ");
+
+    // Step 3: Preserve dots in version numbers
+    let text = preserve_version_dots(&text);
+
+    // Step 4: Normalize — collect words
+    let words: Vec<String> = if options.keep_unicode {
+        text.split(|c: char| !c.is_alphanumeric() && c != VERSION_DOT)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    } else {
+        text.split(|c: char| !c.is_ascii_alphanumeric() && c != VERSION_DOT)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    };
+
+    if words.is_empty() {
+        return Cow::Owned(String::new());
+    }
+
+    // Step 5: Join with chosen separator
+    let slugified = match options.style {
+        Style::Kebab => words.join("-"),
+        Style::Snake => words.join("_"),
+        Style::Camel => {
+            let mut result = String::new();
+            for (i, word) in words.iter().enumerate() {
+                if i == 0 {
+                    result.push_str(word);
+                } else {
+                    let mut chars = word.chars();
+                    if let Some(first) = chars.next() {
+                        result.extend(first.to_uppercase());
+                        result.push_str(chars.as_str());
+                    }
+                }
+            }
+            result
+        }
+    };
+
+    // Step 6: Restore version dots
+    let slugified = restore_version_dots(&slugified);
+
+    // Step 7: Truncate to max length (no extension to account for)
+    let slugified = truncate_base(&slugified, "", MAX_FILENAME_BYTES);
+
+    Cow::Owned(slugified)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -706,5 +787,85 @@ mod tests {
         assert!(result.ends_with(".txt"));
         // Verify it's valid UTF-8 (implicit — it's a &str) and not empty
         assert!(!result.is_empty());
+    }
+
+    // --- slugify_string tests ---
+
+    #[test]
+    fn test_slugify_string_basic() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+    }
+
+    #[test]
+    fn test_slugify_string_no_extension_handling() {
+        let opts = SlugifyOptions::default();
+        // Unlike slugify(), dots are not treated as extensions
+        assert_eq!(slugify_string("my.blog.post", &opts), "my-blog-post");
+    }
+
+    #[test]
+    fn test_slugify_string_snake() {
+        let opts = SlugifyOptions { style: Style::Snake, ..Default::default() };
+        assert_eq!(slugify_string("My Blog Post", &opts), "my_blog_post");
+    }
+
+    #[test]
+    fn test_slugify_string_camel() {
+        let opts = SlugifyOptions { style: Style::Camel, ..Default::default() };
+        assert_eq!(slugify_string("my blog post", &opts), "myBlogPost");
+    }
+
+    #[test]
+    fn test_slugify_string_unicode() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+    }
+
+    #[test]
+    fn test_slugify_string_keep_unicode() {
+        let opts = SlugifyOptions { keep_unicode: true, ..Default::default() };
+        assert_eq!(slugify_string("Café Résumé", &opts), "café-résumé");
+    }
+
+    #[test]
+    fn test_slugify_string_empty() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("", &opts), "");
+    }
+
+    #[test]
+    fn test_slugify_string_only_special() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("@#$!", &opts), "");
+    }
+
+    #[test]
+    fn test_slugify_string_preserves_version_dots() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("app version 1.2.3", &opts), "app-version-1.2.3");
+    }
+
+    #[test]
+    fn test_slugify_string_brackets_stripped() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("Hello (World) [2024]", &opts), "hello-world-2024");
+    }
+
+    #[test]
+    fn test_slugify_string_truncates_long_input() {
+        let opts = SlugifyOptions::default();
+        let long_input = "a ".repeat(200); // 200 words → "a-a-a-..." exceeds 255 bytes
+        let result = slugify_string(&long_input, &opts);
+        assert!(result.len() <= 255, "result is {} bytes", result.len());
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_slugify_string_dotfile_not_preserved() {
+        let opts = SlugifyOptions::default();
+        // Unlike slugify(), dotfiles are not treated specially — the dot is a separator
+        assert_eq!(slugify_string(".gitignore", &opts), "gitignore");
+        assert_eq!(slugify_string(".env.local", &opts), "env-local");
     }
 }
