@@ -1,6 +1,6 @@
 [package]
 name = "slugr"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.91"
 description = "Rename files and directories to clean, URL and shell-friendly slugs — or pipe arbitrary text through for slugification"
@@ -11,7 +11,7 @@ keywords = ["slug", "rename", "filename", "cli", "slugify"]
 categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
-fileslug = { version = "0.1.2", path = "../crates/fileslug" }
+fileslug = { version = "0.1.3", path = "../crates/fileslug" }
 clap = { version = "4", features = ["derive"] }
 walkdir = "2"
 
