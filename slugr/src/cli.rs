@@ -110,4 +110,55 @@ mod tests {
         assert!(args.recursive);
         assert_eq!(args.files, vec![PathBuf::from("file.txt")]);
     }
+
+    #[test]
+    fn test_pipe_flag() {
+        let args = Cli::parse_from(["slugr", "--pipe"]);
+        assert!(args.pipe);
+        assert!(!args.raw);
+    }
+
+    #[test]
+    fn test_pipe_with_raw() {
+        let args = Cli::parse_from(["slugr", "--pipe", "--raw"]);
+        assert!(args.pipe);
+        assert!(args.raw);
+    }
+
+    #[test]
+    fn test_raw_requires_pipe() {
+        let result = Cli::try_parse_from(["slugr", "--raw", "file.txt"]);
+        assert!(result.is_err(), "--raw without --pipe should error");
+    }
+
+    #[test]
+    fn test_pipe_conflicts_with_execute() {
+        let result = Cli::try_parse_from(["slugr", "--pipe", "-x"]);
+        assert!(result.is_err(), "--pipe should conflict with -x");
+    }
+
+    #[test]
+    fn test_pipe_conflicts_with_recursive() {
+        let result = Cli::try_parse_from(["slugr", "--pipe", "-r"]);
+        assert!(result.is_err(), "--pipe should conflict with -r");
+    }
+
+    #[test]
+    fn test_pipe_conflicts_with_interactive() {
+        let result = Cli::try_parse_from(["slugr", "--pipe", "-i"]);
+        assert!(result.is_err(), "--pipe should conflict with -i");
+    }
+
+    #[test]
+    fn test_pipe_conflicts_with_clobber() {
+        let result = Cli::try_parse_from(["slugr", "--pipe", "--clobber"]);
+        assert!(result.is_err(), "--pipe should conflict with --clobber");
+    }
+
+    #[test]
+    fn test_pipe_with_style_flags() {
+        let args = Cli::parse_from(["slugr", "--pipe", "--snake"]);
+        assert!(args.pipe);
+        assert!(args.snake);
+    }
 }
