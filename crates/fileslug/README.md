@@ -1,10 +1,15 @@
 # fileslug
 
-Filename-aware slug generator for Rust. Converts messy filenames into clean, shell-safe slugs while preserving extensions, dotfiles, and version numbers.
+Slug generator for Rust. Slugifies filenames and arbitrary text into clean, URL and shell-friendly strings.
 
-Unlike URL slug libraries (which destroy `.tar.gz` → `tar-gz`), fileslug understands filenames.
+Two entry points:
+
+- **`slugify()`** — filename-aware: preserves extensions, dotfiles, compound extensions (`.tar.gz`), and version numbers
+- **`slugify_string()`** — plain text: treats input as a raw string with no filename handling — use for URL slugs, identifiers, titles, etc.
 
 ## Usage
+
+### Filenames
 
 ```rust
 use fileslug::{slugify, SlugifyOptions, Style};
@@ -28,8 +33,19 @@ let unicode = SlugifyOptions { keep_unicode: true, ..Default::default() };
 assert_eq!(slugify("Café.txt", &unicode), "café.txt");
 ```
 
+### Arbitrary text
+
+```rust
+use fileslug::{slugify_string, SlugifyOptions};
+
+let opts = SlugifyOptions::default();
+assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+```
+
 ## Features
 
+- **Two modes** — filename-aware (`slugify`) and plain text (`slugify_string`)
 - **Extension preservation** — `.txt`, `.tar.gz`, `.tar.bz2` etc. never modified
 - **Dotfile awareness** — `.gitignore`, `.env` returned as-is
 - **Version number preservation** — `1.2.3` dots kept intact
