@@ -1,5 +1,8 @@
 # slugr
 
+[![Crates.io](https://img.shields.io/crates/v/slugr)](https://crates.io/crates/slugr)
+[![Crates.io](https://img.shields.io/crates/v/fileslug)](https://crates.io/crates/fileslug)
+
 Rename files and directories to clean, URL and shell-friendly slugs.
 
 ```
