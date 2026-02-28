@@ -707,4 +707,67 @@ mod tests {
         // Verify it's valid UTF-8 (implicit — it's a &str) and not empty
         assert!(!result.is_empty());
     }
+
+    // --- slugify_string tests ---
+
+    #[test]
+    fn test_slugify_string_basic() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+    }
+
+    #[test]
+    fn test_slugify_string_no_extension_handling() {
+        let opts = SlugifyOptions::default();
+        // Unlike slugify(), dots are not treated as extensions
+        assert_eq!(slugify_string("my.blog.post", &opts), "my-blog-post");
+    }
+
+    #[test]
+    fn test_slugify_string_snake() {
+        let opts = SlugifyOptions { style: Style::Snake, ..Default::default() };
+        assert_eq!(slugify_string("My Blog Post", &opts), "my_blog_post");
+    }
+
+    #[test]
+    fn test_slugify_string_camel() {
+        let opts = SlugifyOptions { style: Style::Camel, ..Default::default() };
+        assert_eq!(slugify_string("my blog post", &opts), "myBlogPost");
+    }
+
+    #[test]
+    fn test_slugify_string_unicode() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+    }
+
+    #[test]
+    fn test_slugify_string_keep_unicode() {
+        let opts = SlugifyOptions { keep_unicode: true, ..Default::default() };
+        assert_eq!(slugify_string("Café Résumé", &opts), "café-résumé");
+    }
+
+    #[test]
+    fn test_slugify_string_empty() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("", &opts), "");
+    }
+
+    #[test]
+    fn test_slugify_string_only_special() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("@#$!", &opts), "");
+    }
+
+    #[test]
+    fn test_slugify_string_preserves_version_dots() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("app version 1.2.3", &opts), "app-version-1.2.3");
+    }
+
+    #[test]
+    fn test_slugify_string_brackets_stripped() {
+        let opts = SlugifyOptions::default();
+        assert_eq!(slugify_string("Hello (World) [2024]", &opts), "hello-world-2024");
+    }
 }
