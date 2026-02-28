@@ -492,3 +492,159 @@ fn test_empty_slug_error() {
     // Original file should still exist
     assert!(file.exists());
 }
+
+// --- Pipe mode integration tests ---
+
+#[test]
+fn test_pipe_mode_basic() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"My Cool File.txt\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "my-cool-file.txt");
+}
+
+#[test]
+fn test_pipe_mode_raw() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"My Blog Post Title!\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "my-blog-post-title");
+}
+
+#[test]
+fn test_pipe_mode_multiple_lines() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"Cafe Resume\nHello World\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines, vec!["cafe-resume", "hello-world"]);
+}
+
+#[test]
+fn test_pipe_mode_snake_style() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .arg("--snake")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"My Blog Post\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "my_blog_post");
+}
+
+#[test]
+fn test_pipe_mode_filename_aware_default() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"My Resume (Final).pdf\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "my-resume-final.pdf");
+}
+
+#[test]
+fn test_pipe_mode_raw_dots_not_preserved_as_ext() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"my.blog.post\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "my-blog-post");
+}
+
+#[test]
+fn test_pipe_mode_empty_line_skipped() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"\nHello World\n\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines, vec!["hello-world"]);
+}
+
+#[test]
+fn test_pipe_mode_empty_slug_warning() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"@#$!\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("empty"), "expected warning about empty slug, got: {stderr}");
+}
