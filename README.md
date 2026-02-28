@@ -1,6 +1,6 @@
 # slugr
 
-Rename files and directories to clean, URL and shell friendly slugs.
+Rename files and directories to clean, URL and shell-friendly slugs.
 
 ```
 $ slugr "My Résumé (Final).pdf" "Photo 2024_01.JPG"
