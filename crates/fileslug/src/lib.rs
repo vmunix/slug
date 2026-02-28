@@ -1,17 +1,24 @@
-//! Filename-aware slug generator.
+//! Slug generator for filenames and arbitrary text.
 //!
-//! Unlike URL slug libraries, `fileslug` preserves file extensions, dotfiles,
-//! compound extensions (`.tar.gz`), and version numbers (`1.2.3`).
+//! Two entry points:
+//!
+//! - [`slugify()`] — filename-aware: preserves extensions, dotfiles, compound
+//!   extensions (`.tar.gz`), and version numbers (`1.2.3`).
+//! - [`slugify_string()`] — plain text: no extension splitting or dotfile
+//!   handling. Use for URL slugs, identifiers, titles, etc.
 //!
 //! # Examples
 //!
 //! ```
-//! use fileslug::{slugify, SlugifyOptions};
+//! use fileslug::{slugify, slugify_string, SlugifyOptions};
 //!
 //! let opts = SlugifyOptions::default();
 //! assert_eq!(slugify("My Résumé (Final).pdf", &opts), "my-resume-final.pdf");
 //! assert_eq!(slugify(".gitignore", &opts), ".gitignore");
 //! assert_eq!(slugify("app-1.2.3.dmg", &opts), "app-1.2.3.dmg");
+//!
+//! assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+//! assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
 //! ```
 
 use std::borrow::Cow;
