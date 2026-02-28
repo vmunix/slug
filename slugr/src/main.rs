@@ -5,7 +5,7 @@ mod walk;
 #[cfg(test)]
 mod fixtures;
 
-use std::io::{self, BufRead, IsTerminal};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -15,6 +15,41 @@ use cli::Cli;
 use rename::{rename_file, RenameResult};
 use fileslug::{slugify, slugify_string, SlugifyOptions};
 use walk::collect_paths;
+
+/// Pipe mode: read lines from stdin, slugify each, write to stdout.
+fn run_pipe(options: &SlugifyOptions, raw: bool) -> ExitCode {
+    let stdout = io::stdout();
+    let mut out = io::BufWriter::new(stdout.lock());
+    let stdin = io::stdin();
+    for line in stdin.lock().lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("slugr: read error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        if line.is_empty() {
+            continue;
+        }
+        let slugified = if raw {
+            slugify_string(&line, options)
+        } else {
+            slugify(&line, options)
+        };
+        if slugified.is_empty() {
+            eprintln!("slugr: warning: '{line}' slugifies to empty");
+            continue;
+        }
+        if writeln!(out, "{slugified}").is_err() {
+            return ExitCode::FAILURE;
+        }
+    }
+    if out.flush().is_err() {
+        return ExitCode::FAILURE;
+    }
+    ExitCode::SUCCESS
+}
 
 fn main() -> ExitCode {
     let args = Cli::parse();
@@ -26,35 +61,8 @@ fn main() -> ExitCode {
         keep_unicode: args.keep_unicode,
     };
 
-    // Pipe mode: read stdin, slugify, write stdout
     if args.pipe {
-        use std::io::Write;
-        let stdout = io::stdout();
-        let mut out = io::BufWriter::new(stdout.lock());
-        let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            let line = match line {
-                Ok(l) => l,
-                Err(e) => {
-                    eprintln!("slugr: read error: {e}");
-                    return ExitCode::FAILURE;
-                }
-            };
-            if line.is_empty() {
-                continue;
-            }
-            let slugified = if args.raw {
-                slugify_string(&line, &options)
-            } else {
-                slugify(&line, &options)
-            };
-            if slugified.is_empty() {
-                eprintln!("slugr: warning: '{line}' slugifies to empty");
-                continue;
-            }
-            let _ = writeln!(out, "{slugified}");
-        }
-        return ExitCode::SUCCESS;
+        return run_pipe(&options, args.raw);
     }
 
     let dry_run = !args.execute;
