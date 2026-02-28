@@ -46,6 +46,14 @@ pub struct Cli {
     #[arg(long)]
     pub keep_unicode: bool,
 
+    /// Pipe mode: read text from stdin, write slugified output to stdout
+    #[arg(long, conflicts_with_all = ["execute", "clobber", "interactive", "recursive"])]
+    pub pipe: bool,
+
+    /// Treat input as raw text, not filenames (skip extension handling). Requires --pipe
+    #[arg(long, requires = "pipe")]
+    pub raw: bool,
+
     /// Files and directories to rename
     pub files: Vec<PathBuf>,
 }
