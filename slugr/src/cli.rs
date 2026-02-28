@@ -83,6 +83,8 @@ mod tests {
         assert!(!args.snake);
         assert!(!args.camel);
         assert!(!args.keep_unicode);
+        assert!(!args.pipe);
+        assert!(!args.raw);
         assert_eq!(args.files, vec![PathBuf::from("file.txt")]);
     }
 

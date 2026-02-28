@@ -851,4 +851,21 @@ mod tests {
         let opts = SlugifyOptions::default();
         assert_eq!(slugify_string("Hello (World) [2024]", &opts), "hello-world-2024");
     }
+
+    #[test]
+    fn test_slugify_string_truncates_long_input() {
+        let opts = SlugifyOptions::default();
+        let long_input = "a ".repeat(200); // 200 words → "a-a-a-..." exceeds 255 bytes
+        let result = slugify_string(&long_input, &opts);
+        assert!(result.len() <= 255, "result is {} bytes", result.len());
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_slugify_string_dotfile_not_preserved() {
+        let opts = SlugifyOptions::default();
+        // Unlike slugify(), dotfiles are not treated specially — the dot is a separator
+        assert_eq!(slugify_string(".gitignore", &opts), "gitignore");
+        assert_eq!(slugify_string(".env.local", &opts), "env-local");
+    }
 }
