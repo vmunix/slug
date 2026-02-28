@@ -302,6 +302,87 @@ pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> 
     Cow::Owned(format!("{slugified}{ext}"))
 }
 
+/// Slugify an arbitrary string (not a filename).
+///
+/// Unlike [`slugify`], this treats the entire input as plain text — no
+/// extension splitting, no dotfile preservation. Use this for generating
+/// URL slugs, identifiers, or other non-filename use cases.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify_string, SlugifyOptions};
+///
+/// let opts = SlugifyOptions::default();
+/// assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+/// assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+/// ```
+#[must_use]
+pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
+    if input.is_empty() {
+        return Cow::Borrowed("");
+    }
+
+    // Step 1: Transliterate
+    let text = if options.keep_unicode {
+        input.to_string()
+    } else {
+        any_ascii::any_ascii(input)
+    };
+
+    // Step 2: Strip bracket characters, keep contents
+    let text = text.replace(['(', ')', '[', ']', '{', '}'], " ");
+
+    // Step 3: Preserve dots in version numbers
+    let text = preserve_version_dots(&text);
+
+    // Step 4: Normalize — collect words
+    let words: Vec<String> = if options.keep_unicode {
+        text.split(|c: char| !c.is_alphanumeric() && c != VERSION_DOT)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    } else {
+        text.split(|c: char| !c.is_ascii_alphanumeric() && c != VERSION_DOT)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    };
+
+    if words.is_empty() {
+        return Cow::Owned(String::new());
+    }
+
+    // Step 5: Join with chosen separator
+    let slugified = match options.style {
+        Style::Kebab => words.join("-"),
+        Style::Snake => words.join("_"),
+        Style::Camel => {
+            let mut result = String::new();
+            for (i, word) in words.iter().enumerate() {
+                if i == 0 {
+                    result.push_str(word);
+                } else {
+                    let mut chars = word.chars();
+                    if let Some(first) = chars.next() {
+                        result.extend(first.to_uppercase());
+                        result.push_str(chars.as_str());
+                    }
+                }
+            }
+            result
+        }
+    };
+
+    // Step 6: Restore version dots
+    let slugified = restore_version_dots(&slugified);
+
+    // Step 7: Truncate to max length (no extension to account for)
+    let slugified = truncate_base(&slugified, "", MAX_FILENAME_BYTES);
+
+    Cow::Owned(slugified)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
