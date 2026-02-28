@@ -3,7 +3,7 @@
 [![slugr CLI](https://img.shields.io/crates/v/slugr?label=slugr%20%28cli%29)](https://crates.io/crates/slugr)
 [![fileslug library](https://img.shields.io/crates/v/fileslug?label=fileslug%20%28lib%29)](https://crates.io/crates/fileslug)
 
-Rename files and directories to clean, URL and shell-friendly slugs.
+Rename files and directories to clean, URL and shell-friendly slugs — or pipe arbitrary text through for slugification.
 
 ```
 $ slugr "My Résumé (Final).pdf" "Photo 2024_01.JPG"
