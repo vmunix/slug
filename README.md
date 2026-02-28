@@ -62,6 +62,33 @@ slugr -ix *.jpg
 | | `--snake` | Use `snake_case` instead of `kebab-case` |
 | | `--camel` | Use `camelCase` instead of `kebab-case` |
 | | `--keep-unicode` | Preserve unicode characters, only normalize separators |
+| | `--pipe` | Pipe mode: read text from stdin, write slugified output to stdout |
+| | `--raw` | Treat input as raw text, not filenames (requires `--pipe`) |
+
+## Pipe mode
+
+slugr can also slugify arbitrary text without touching the filesystem. Use `--pipe` to read from stdin and write slugified output to stdout:
+
+```bash
+# Slugify filenames (preserves extensions)
+echo "My Résumé (Final).pdf" | slugr --pipe
+# → my-resume-final.pdf
+
+# Slugify raw text (no filename handling)
+echo "My Blog Post Title!" | slugr --pipe --raw
+# → my-blog-post-title
+
+# Works with style flags
+echo "My Blog Post" | slugr --pipe --raw --snake
+# → my_blog_post
+
+# Multiple lines
+printf "Café Résumé\nHello World\n" | slugr --pipe --raw
+# → cafe-resume
+# → hello-world
+```
+
+By default, `--pipe` uses filename-aware slugification (preserving extensions and dotfiles). Add `--raw` to treat input as plain text — useful for generating URL slugs, identifiers, or clean strings.
 
 ## What it does
 
