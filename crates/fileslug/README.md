@@ -24,9 +24,9 @@ assert_eq!(slugify("app-1.2.3.dmg", &opts), "app-1.2.3.dmg");
 let snake = SlugifyOptions { style: Style::Snake, ..Default::default() };
 assert_eq!(slugify("My Cool File.txt", &snake), "my_cool_file.txt");
 
-// camelCase
-let camel = SlugifyOptions { style: Style::Camel, ..Default::default() };
-assert_eq!(slugify("my cool file.txt", &camel), "myCoolFile.txt");
+// PascalCase
+let pascal = SlugifyOptions { style: Style::Pascal, ..Default::default() };
+assert_eq!(slugify("my cool file.txt", &pascal), "MyCoolFile.txt");
 
 // Keep unicode (skip transliteration)
 let unicode = SlugifyOptions { keep_unicode: true, ..Default::default() };
@@ -50,5 +50,5 @@ assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
 - **Dotfile awareness** — `.gitignore`, `.env` returned as-is
 - **Version number preservation** — `1.2.3` dots kept intact
 - **Unicode transliteration** — via `any_ascii` (or keep-unicode to skip)
-- **Three styles** — kebab-case (default), snake_case, camelCase
+- **Three styles** — kebab-case (default), snake_case, PascalCase
 - **Zero-copy for dotfiles** — returns `Cow::Borrowed` when no changes needed

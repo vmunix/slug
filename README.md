@@ -63,7 +63,7 @@ slugr -ix *.jpg
 | `-i` | `--interactive` | Prompt before each rename |
 | | `--clobber` | Allow overwriting existing files (default: no-clobber) |
 | | `--snake` | Use `snake_case` instead of `kebab-case` |
-| | `--camel` | Use `camelCase` instead of `kebab-case` |
+| | `--pascal` | Use `PascalCase` instead of `kebab-case` |
 | | `--keep-unicode` | Preserve unicode characters, only normalize separators |
 | | `--pipe` | Pipe mode: read text from stdin, write slugified output to stdout |
 | | `--raw` | Treat input as raw text, not filenames (requires `--pipe`) |
@@ -119,9 +119,9 @@ My Cool File.txt → my-cool-file.txt
 My Cool File.txt → my_cool_file.txt
 ```
 
-**camelCase** (`--camel`):
+**PascalCase** (`--pascal`):
 ```
-My Cool File.txt → myCoolFile.txt
+My Cool File.txt → MyCoolFile.txt
 ```
 
 ### Unicode handling
