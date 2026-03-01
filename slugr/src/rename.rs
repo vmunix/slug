@@ -80,21 +80,13 @@ pub fn rename_file(source: &Path, target: &Path, no_clobber: bool, dry_run: bool
         return RenameResult::Skipped(source.to_path_buf());
     }
 
-    // Case-only rename (same inode, different name): skip safe_target to avoid
-    // false collision on case-insensitive filesystems
-    let is_case_only = same_file(source, target);
-
-    let final_target = if is_case_only {
-        target.to_path_buf()
-    } else {
-        match safe_target(target, no_clobber, Some(source)) {
-            Ok(t) => t,
-            Err(e) => {
-                return RenameResult::Failed {
-                    path: source.to_path_buf(),
-                    error: e,
-                };
-            }
+    let final_target = match safe_target(target, no_clobber, Some(source)) {
+        Ok(t) => t,
+        Err(e) => {
+            return RenameResult::Failed {
+                path: source.to_path_buf(),
+                error: e,
+            };
         }
     };
 
