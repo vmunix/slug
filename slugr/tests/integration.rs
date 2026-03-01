@@ -688,3 +688,16 @@ fn test_pipe_mode_empty_slug_warning() {
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains("empty"), "expected warning about empty slug, got: {stderr}");
 }
+
+#[test]
+fn test_pipe_conflicts_with_file_args() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("file.txt")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("cannot be used with"), "expected conflict error, got: {stderr}");
+}
