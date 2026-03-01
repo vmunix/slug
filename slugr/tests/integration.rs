@@ -573,6 +573,46 @@ fn test_pipe_mode_snake_style() {
 }
 
 #[test]
+fn test_pipe_mode_pascal_style() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .arg("--pascal")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(b"my blog post\n").unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "MyBlogPost");
+}
+
+#[test]
+fn test_pipe_mode_keep_unicode() {
+    let output = slug_bin()
+        .arg("--pipe")
+        .arg("--raw")
+        .arg("--keep-unicode")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all("Café Résumé\n".as_bytes()).unwrap();
+            child.wait_with_output()
+        })
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.trim(), "café-résumé");
+}
+
+#[test]
 fn test_pipe_mode_filename_aware_default() {
     let output = slug_bin()
         .arg("--pipe")
