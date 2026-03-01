@@ -72,8 +72,8 @@ pub enum Style {
     Kebab,
     /// `my_cool_file.txt`
     Snake,
-    /// `myCoolFile.txt`
-    Camel,
+    /// `MyCoolFile.txt`
+    Pascal,
 }
 
 /// Options controlling the [`slugify`] pipeline.
@@ -93,7 +93,7 @@ pub enum Style {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SlugifyOptions {
-    /// Word separator style (kebab, snake, or camel).
+    /// Word separator style (kebab, snake, or pascal).
     pub style: Style,
     /// When `true`, skip ASCII transliteration and preserve unicode characters.
     pub keep_unicode: bool,
@@ -275,17 +275,13 @@ pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> 
     let slugified = match options.style {
         Style::Kebab => words.join("-"),
         Style::Snake => words.join("_"),
-        Style::Camel => {
+        Style::Pascal => {
             let mut result = String::new();
-            for (i, word) in words.iter().enumerate() {
-                if i == 0 {
-                    result.push_str(word);
-                } else {
-                    let mut chars = word.chars();
-                    if let Some(first) = chars.next() {
-                        result.extend(first.to_uppercase());
-                        result.push_str(chars.as_str());
-                    }
+            for word in &words {
+                let mut chars = word.chars();
+                if let Some(first) = chars.next() {
+                    result.extend(first.to_uppercase());
+                    result.push_str(chars.as_str());
                 }
             }
             result
@@ -364,17 +360,13 @@ pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, s
     let slugified = match options.style {
         Style::Kebab => words.join("-"),
         Style::Snake => words.join("_"),
-        Style::Camel => {
+        Style::Pascal => {
             let mut result = String::new();
-            for (i, word) in words.iter().enumerate() {
-                if i == 0 {
-                    result.push_str(word);
-                } else {
-                    let mut chars = word.chars();
-                    if let Some(first) = chars.next() {
-                        result.extend(first.to_uppercase());
-                        result.push_str(chars.as_str());
-                    }
+            for word in &words {
+                let mut chars = word.chars();
+                if let Some(first) = chars.next() {
+                    result.extend(first.to_uppercase());
+                    result.push_str(chars.as_str());
                 }
             }
             result
@@ -444,9 +436,9 @@ mod tests {
     }
 
     #[test]
-    fn test_slugify_camel() {
-        let opts = SlugifyOptions { style: Style::Camel, ..Default::default() };
-        assert_eq!(slugify("my cool file.txt", &opts), "myCoolFile.txt");
+    fn test_slugify_pascal() {
+        let opts = SlugifyOptions { style: Style::Pascal, ..Default::default() };
+        assert_eq!(slugify("my cool file.txt", &opts), "MyCoolFile.txt");
     }
 
     #[test]
@@ -522,9 +514,9 @@ mod tests {
     }
 
     #[test]
-    fn test_slugify_camel_multiple_words() {
-        let opts = SlugifyOptions { style: Style::Camel, ..Default::default() };
-        assert_eq!(slugify("Hello World Foo Bar.txt", &opts), "helloWorldFooBar.txt");
+    fn test_slugify_pascal_multiple_words() {
+        let opts = SlugifyOptions { style: Style::Pascal, ..Default::default() };
+        assert_eq!(slugify("Hello World Foo Bar.txt", &opts), "HelloWorldFooBar.txt");
     }
 
     #[test]
@@ -818,9 +810,9 @@ mod tests {
     }
 
     #[test]
-    fn test_slugify_string_camel() {
-        let opts = SlugifyOptions { style: Style::Camel, ..Default::default() };
-        assert_eq!(slugify_string("my blog post", &opts), "myBlogPost");
+    fn test_slugify_string_pascal() {
+        let opts = SlugifyOptions { style: Style::Pascal, ..Default::default() };
+        assert_eq!(slugify_string("my blog post", &opts), "MyBlogPost");
     }
 
     #[test]

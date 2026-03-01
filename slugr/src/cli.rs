@@ -35,12 +35,12 @@ pub struct Cli {
     pub recursive: bool,
 
     /// Use `snake_case` instead of kebab-case
-    #[arg(long, conflicts_with = "camel")]
+    #[arg(long, conflicts_with = "pascal")]
     pub snake: bool,
 
-    /// Use camelCase instead of kebab-case
+    /// Use `PascalCase` instead of kebab-case
     #[arg(long, conflicts_with = "snake")]
-    pub camel: bool,
+    pub pascal: bool,
 
     /// Preserve unicode characters, only normalize separators
     #[arg(long)]
@@ -60,9 +60,9 @@ pub struct Cli {
 
 impl Cli {
     pub fn style(&self) -> Style {
-        match (self.snake, self.camel) {
+        match (self.snake, self.pascal) {
             (true, _) => Style::Snake,
-            (_, true) => Style::Camel,
+            (_, true) => Style::Pascal,
             _ => Style::Kebab,
         }
     }
@@ -81,7 +81,7 @@ mod tests {
         assert!(!args.interactive);
         assert!(!args.recursive);
         assert!(!args.snake);
-        assert!(!args.camel);
+        assert!(!args.pascal);
         assert!(!args.keep_unicode);
         assert!(!args.pipe);
         assert!(!args.raw);
@@ -109,9 +109,9 @@ mod tests {
     }
 
     #[test]
-    fn test_snake_and_camel_conflict() {
-        let result = Cli::try_parse_from(["slugr", "--snake", "--camel", "file.txt"]);
-        assert!(result.is_err(), "should error when both --snake and --camel are set");
+    fn test_snake_and_pascal_conflict() {
+        let result = Cli::try_parse_from(["slugr", "--snake", "--pascal", "file.txt"]);
+        assert!(result.is_err(), "should error when both --snake and --pascal are set");
     }
 
     #[test]

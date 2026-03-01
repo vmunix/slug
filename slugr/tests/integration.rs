@@ -97,20 +97,20 @@ fn test_snake_case_flag() {
 }
 
 #[test]
-fn test_camel_case_flag() {
+fn test_pascal_case_flag() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("my cool file.txt");
     fs::write(&file, "hello").unwrap();
 
     let output = slug_bin()
         .arg("-x")
-        .arg("--camel")
+        .arg("--pascal")
         .arg(file.to_str().unwrap())
         .output()
         .unwrap();
 
     assert!(output.status.success());
-    assert!(dir.path().join("myCoolFile.txt").exists());
+    assert!(dir.path().join("MyCoolFile.txt").exists());
 }
 
 #[test]
@@ -460,10 +460,10 @@ fn test_recursive_on_single_file() {
 }
 
 #[test]
-fn test_snake_camel_conflict_e2e() {
+fn test_snake_pascal_conflict_e2e() {
     let output = slug_bin()
         .arg("--snake")
-        .arg("--camel")
+        .arg("--pascal")
         .arg("file.txt")
         .output()
         .unwrap();
