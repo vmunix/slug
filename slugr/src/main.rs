@@ -35,7 +35,7 @@ fn run_pipe(options: &SlugifyOptions, raw: bool) -> ExitCode {
         let slugified = if raw {
             slugify_string(&line, options)
         } else {
-            slugify(&line, options)
+            slugify(&line, options).into_owned()
         };
         if slugified.is_empty() {
             eprintln!("slugr: warning: '{line}' slugifies to empty");
