@@ -48,10 +48,12 @@ pub fn split_extension(filename: &str) -> (&str, &str) {
         return ("", filename);
     }
 
-    // Compound extensions
-    let lower = filename.to_lowercase();
+    // Compound extensions (ASCII-only, so byte-level case comparison is safe)
     for ext in COMPOUND {
-        if lower.ends_with(ext) {
+        if filename.len() >= ext.len()
+            && filename.as_bytes()[filename.len() - ext.len()..]
+                .eq_ignore_ascii_case(ext.as_bytes())
+        {
             let base_end = filename.len() - ext.len();
             return (&filename[..base_end], &filename[base_end..]);
         }
@@ -91,21 +93,12 @@ pub enum Style {
 /// let opts = SlugifyOptions { keep_unicode: true, ..Default::default() };
 /// assert_eq!(slugify("Café Menu.txt", &opts), "café-menu.txt");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SlugifyOptions {
     /// Word separator style (kebab, snake, or pascal).
     pub style: Style,
     /// When `true`, skip ASCII transliteration and preserve unicode characters.
     pub keep_unicode: bool,
-}
-
-impl Default for SlugifyOptions {
-    fn default() -> Self {
-        Self {
-            style: Style::Kebab,
-            keep_unicode: false,
-        }
-    }
 }
 
 /// Placeholder byte used to protect dots inside version numbers.
@@ -211,126 +204,11 @@ fn truncate_base(base: &str, ext: &str, max_bytes: usize) -> String {
     truncated.to_string()
 }
 
-/// Slugify a filename according to the given options.
+/// Core slugification pipeline shared by [`slugify`] and [`slugify_string`].
 ///
-/// Converts a filename to a clean, shell-safe slug while preserving its
-/// extension, dotfile status, and any embedded version numbers. Returns
-/// [`Cow::Borrowed`] when the input is already clean (e.g. dotfiles).
-///
-/// Names exceeding 255 bytes are silently truncated at a word boundary.
-///
-/// # Examples
-///
-/// ```
-/// use fileslug::{slugify, SlugifyOptions};
-///
-/// let opts = SlugifyOptions::default();
-/// assert_eq!(slugify("My Résumé (Final).pdf", &opts), "my-resume-final.pdf");
-/// assert_eq!(slugify(".gitignore", &opts), ".gitignore");
-/// assert_eq!(slugify("app-1.2.3.dmg", &opts), "app-1.2.3.dmg");
-/// assert_eq!(slugify("Photo 2024_01.JPG", &opts), "photo-2024-01.JPG");
-/// ```
-#[must_use]
-pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
-    if filename.is_empty() {
-        return Cow::Borrowed("");
-    }
-
-    let (base, ext) = split_extension(filename);
-
-    // Dotfiles with no base: return as-is
-    if base.is_empty() {
-        return Cow::Borrowed(filename);
-    }
-
-    // Remember if original base starts with '.' (dotfile with extension like .env.local)
-    let is_dotfile = base.starts_with('.');
-
-    // Step 2: Transliterate
-    let base = if options.keep_unicode {
-        base.to_string()
-    } else {
-        any_ascii::any_ascii(base)
-    };
-
-    // Step 3: Strip bracket characters, keep contents
-    let base = base.replace(['(', ')', '[', ']', '{', '}'], " ");
-
-    // Step 3b: Preserve dots in version numbers (e.g. "0.8.34")
-    let base = preserve_version_dots(&base);
-
-    // Step 4: Normalize — collect words (sequences of alphanumeric/unicode chars)
-    let words: Vec<String> = if options.keep_unicode {
-        base.split(|c: char| !c.is_alphanumeric() && c != VERSION_DOT)
-            .filter(|s| !s.is_empty())
-            .map(str::to_lowercase)
-            .collect()
-    } else {
-        base.split(|c: char| !c.is_ascii_alphanumeric() && c != VERSION_DOT)
-            .filter(|s| !s.is_empty())
-            .map(str::to_lowercase)
-            .collect()
-    };
-
-    if words.is_empty() {
-        return Cow::Owned(ext.to_string());
-    }
-
-    // Step 5: Join with chosen separator
-    let slugified = match options.style {
-        Style::Kebab => words.join("-"),
-        Style::Snake => words.join("_"),
-        Style::Pascal => {
-            let mut result = String::new();
-            for word in &words {
-                let mut chars = word.chars();
-                if let Some(first) = chars.next() {
-                    result.extend(first.to_uppercase());
-                    result.push_str(chars.as_str());
-                }
-            }
-            result
-        }
-    };
-
-    // Step 5b: Restore version dots
-    let slugified = restore_version_dots(&slugified);
-
-    // Step 6: Restore leading dot for dotfiles (e.g. .env.local → .env.local)
-    let slugified = if is_dotfile {
-        format!(".{slugified}")
-    } else {
-        slugified
-    };
-
-    // Step 7: Truncate if filename would exceed filesystem limit
-    let slugified = truncate_base(&slugified, ext, MAX_FILENAME_BYTES);
-
-    // Step 8: Rejoin extension
-    Cow::Owned(format!("{slugified}{ext}"))
-}
-
-/// Slugify an arbitrary string (not a filename).
-///
-/// Unlike [`slugify`], this treats the entire input as plain text — no
-/// extension splitting, no dotfile preservation. Use this for generating
-/// URL slugs, identifiers, or other non-filename use cases.
-///
-/// # Examples
-///
-/// ```
-/// use fileslug::{slugify_string, SlugifyOptions};
-///
-/// let opts = SlugifyOptions::default();
-/// assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
-/// assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
-/// ```
-#[must_use]
-pub fn slugify_string(input: &str, options: &SlugifyOptions) -> String {
-    if input.is_empty() {
-        return String::new();
-    }
-
+/// Transliterates, strips brackets, preserves version dots, normalizes words,
+/// joins with the chosen separator, and restores version dots.
+fn slugify_core(input: &str, options: &SlugifyOptions) -> String {
     // Step 1: Transliterate
     let text = if options.keep_unicode {
         input.to_string()
@@ -341,10 +219,10 @@ pub fn slugify_string(input: &str, options: &SlugifyOptions) -> String {
     // Step 2: Strip bracket characters, keep contents
     let text = text.replace(['(', ')', '[', ']', '{', '}'], " ");
 
-    // Step 3: Preserve dots in version numbers
+    // Step 3: Preserve dots in version numbers (e.g. "0.8.34")
     let text = preserve_version_dots(&text);
 
-    // Step 4: Normalize — collect words
+    // Step 4: Normalize — collect words (sequences of alphanumeric/unicode chars)
     let words: Vec<String> = if options.keep_unicode {
         text.split(|c: char| !c.is_alphanumeric() && c != VERSION_DOT)
             .filter(|s| !s.is_empty())
@@ -379,9 +257,89 @@ pub fn slugify_string(input: &str, options: &SlugifyOptions) -> String {
     };
 
     // Step 6: Restore version dots
-    let slugified = restore_version_dots(&slugified);
+    restore_version_dots(&slugified)
+}
 
-    // Step 7: Truncate to max length
+/// Slugify a filename according to the given options.
+///
+/// Converts a filename to a clean, shell-safe slug while preserving its
+/// extension, dotfile status, and any embedded version numbers. Returns
+/// [`Cow::Borrowed`] when the input is already clean (e.g. dotfiles).
+///
+/// Names exceeding 255 bytes are silently truncated at a word boundary.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify, SlugifyOptions};
+///
+/// let opts = SlugifyOptions::default();
+/// assert_eq!(slugify("My Résumé (Final).pdf", &opts), "my-resume-final.pdf");
+/// assert_eq!(slugify(".gitignore", &opts), ".gitignore");
+/// assert_eq!(slugify("app-1.2.3.dmg", &opts), "app-1.2.3.dmg");
+/// assert_eq!(slugify("Photo 2024_01.JPG", &opts), "photo-2024-01.JPG");
+/// ```
+#[must_use]
+pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
+    if filename.is_empty() {
+        return Cow::Borrowed("");
+    }
+
+    let (base, ext) = split_extension(filename);
+
+    // Dotfiles with no base: return as-is
+    if base.is_empty() {
+        return Cow::Borrowed(filename);
+    }
+
+    let is_dotfile = base.starts_with('.');
+
+    let slugified = slugify_core(base, options);
+
+    if slugified.is_empty() {
+        return Cow::Owned(ext.to_string());
+    }
+
+    // Restore leading dot for dotfiles (e.g. .env.local → .env.local)
+    let slugified = if is_dotfile {
+        format!(".{slugified}")
+    } else {
+        slugified
+    };
+
+    // Truncate if filename would exceed filesystem limit
+    let slugified = truncate_base(&slugified, ext, MAX_FILENAME_BYTES);
+
+    Cow::Owned(format!("{slugified}{ext}"))
+}
+
+/// Slugify an arbitrary string (not a filename).
+///
+/// Unlike [`slugify`], this treats the entire input as plain text — no
+/// extension splitting, no dotfile preservation. Use this for generating
+/// URL slugs, identifiers, or other non-filename use cases.
+///
+/// # Examples
+///
+/// ```
+/// use fileslug::{slugify_string, SlugifyOptions};
+///
+/// let opts = SlugifyOptions::default();
+/// assert_eq!(slugify_string("My Blog Post Title!", &opts), "my-blog-post-title");
+/// assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
+/// ```
+#[must_use]
+pub fn slugify_string(input: &str, options: &SlugifyOptions) -> String {
+    if input.is_empty() {
+        return String::new();
+    }
+
+    let slugified = slugify_core(input, options);
+
+    if slugified.is_empty() {
+        return String::new();
+    }
+
     truncate_base(&slugified, "", MAX_SLUG_BYTES)
 }
 

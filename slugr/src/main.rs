@@ -93,7 +93,7 @@ fn main() -> ExitCode {
 
     for path in &paths {
         let filename = match path.file_name() {
-            Some(f) => f.to_string_lossy().to_string(),
+            Some(f) => f.to_string_lossy(),
             None => continue,
         };
 

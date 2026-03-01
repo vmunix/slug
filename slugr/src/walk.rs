@@ -9,12 +9,12 @@ pub fn collect_paths(paths: &[PathBuf], recursive: bool) -> Vec<PathBuf> {
     let mut result = Vec::new();
 
     for path in paths {
-        if !path.exists() {
+        let Ok(meta) = path.metadata() else {
             eprintln!("slugr: warning: '{}': not found", path.display());
             continue;
-        }
+        };
 
-        if !recursive || path.is_file() {
+        if !recursive || meta.is_file() {
             result.push(path.clone());
             continue;
         }
