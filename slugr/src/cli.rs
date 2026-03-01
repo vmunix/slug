@@ -47,11 +47,11 @@ pub struct Cli {
     pub keep_unicode: bool,
 
     /// Pipe mode: read text from stdin, write slugified output to stdout
-    #[arg(long, conflicts_with_all = ["execute", "clobber", "interactive", "recursive"])]
+    #[arg(long, conflicts_with_all = ["execute", "clobber", "interactive", "recursive", "files"])]
     pub pipe: bool,
 
     /// Treat input as raw text, not filenames (skip extension handling). Requires --pipe
-    #[arg(long, requires = "pipe")]
+    #[arg(long, requires = "pipe", conflicts_with = "files")]
     pub raw: bool,
 
     /// Files and directories to rename
@@ -163,6 +163,12 @@ mod tests {
     fn test_pipe_conflicts_with_clobber() {
         let result = Cli::try_parse_from(["slugr", "--pipe", "--clobber"]);
         assert!(result.is_err(), "--pipe should conflict with --clobber");
+    }
+
+    #[test]
+    fn test_pipe_conflicts_with_files() {
+        let result = Cli::try_parse_from(["slugr", "--pipe", "file.txt"]);
+        assert!(result.is_err(), "--pipe should conflict with file arguments");
     }
 
     #[test]
