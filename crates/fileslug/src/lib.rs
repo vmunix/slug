@@ -321,9 +321,9 @@ pub fn slugify<'a>(filename: &'a str, options: &SlugifyOptions) -> Cow<'a, str> 
 /// assert_eq!(slugify_string("Café Résumé", &opts), "cafe-resume");
 /// ```
 #[must_use]
-pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, str> {
+pub fn slugify_string(input: &str, options: &SlugifyOptions) -> String {
     if input.is_empty() {
-        return Cow::Borrowed("");
+        return String::new();
     }
 
     // Step 1: Transliterate
@@ -353,7 +353,7 @@ pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, s
     };
 
     if words.is_empty() {
-        return Cow::Owned(String::new());
+        return String::new();
     }
 
     // Step 5: Join with chosen separator
@@ -377,9 +377,7 @@ pub fn slugify_string<'a>(input: &'a str, options: &SlugifyOptions) -> Cow<'a, s
     let slugified = restore_version_dots(&slugified);
 
     // Step 7: Truncate to max length (no extension to account for)
-    let slugified = truncate_base(&slugified, "", MAX_FILENAME_BYTES);
-
-    Cow::Owned(slugified)
+    truncate_base(&slugified, "", MAX_FILENAME_BYTES)
 }
 
 #[cfg(test)]
